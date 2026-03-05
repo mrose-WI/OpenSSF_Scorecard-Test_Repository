@@ -5,33 +5,14 @@
 
 version: 2
 updates:
-  # --- GitHub Actions updates ---
   - package-ecosystem: "github-actions"
-    directory: "/"                    # required for scanning .github/workflows
+    directory: "/"
     schedule:
-      interval: "cron"
-      cronjob: "*/10 * * * *"         # every 10 minutes
-      timezone: "Europe/Berlin"
+      interval: "daily"
     open-pull-requests-limit: 10
-    labels: ["dependencies", "github-actions"]
-    commit-message:
-      prefix: "deps(actions)"
-      include: "scope"
 
-  # --- uv dependency updates ---
-  - package-ecosystem: "uv"           # NEW official ecosystem
-    directory: "/"                    # where pyproject.toml + uv.lock exist
+  - package-ecosystem: "uv"
+    directory: "/"
     schedule:
-      interval: "cron"
-      cronjob: "*/10 * * * *"         # every 10 minutes
-      timezone: "Europe/Berlin"
+      interval: "daily"
     open-pull-requests-limit: 10
-    labels: ["dependencies", "uv", "python"]
-    commit-message:
-      prefix: "deps(uv)"
-      include: "scope"
-
-    # Optional grouping (batch all uv updates into a single PR)
-    groups:
-      uv-all:
-        patterns: ["*"]
