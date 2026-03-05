@@ -11,20 +11,11 @@ updates:
       interval: "daily"
     open-pull-requests-limit: 10
     groups:
-      majors:
-        patterns:
-          - "*"
-        update-types:
-          - "major"
-      minors:
+      minor-and-patch:
         patterns:
           - "*"
         update-types:
           - "minor"
-      patches:
-        patterns:
-          - "*"
-        update-types:
           - "patch"
 
   - package-ecosystem: "uv"
@@ -33,18 +24,10 @@ updates:
       interval: "daily"
     open-pull-requests-limit: 10
     groups:
-      majors:
-        patterns:
-          - "*"
-        update-types:
-          - "major"
-      minors:
+      minor-and-patch:
         patterns:
           - "*"
         update-types:
           - "minor"
-      patches:
-        patterns:
-          - "*"
-        update-types:
           - "patch"
+
