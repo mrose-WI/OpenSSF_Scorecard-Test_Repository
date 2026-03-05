@@ -1,0 +1,96 @@
+# Scorecard supply-chain security for pull requests: fail if the score decreases
+name: Scorecard supply-chain security (PR)
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  # Need contents read to check out refs.
+  contents: read
+
+jobs:
+  analysis:
+    name: Scorecard analysis (compare PR -> base)
+    runs-on: ubuntu-latest
+    permissions:
+      # Needed to upload results to code-scanning (if you enable it), keep minimal here.
+      security-events: write
+      id-token: write
+      contents: read
+
+    steps:
+      - name: "Checkout base (target branch)"
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          # Use the base commit of the PR
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: "Run Scorecard on base"
+        uses: ossf/scorecard-action@f49aabe0b5af0936a0987cfb85d86b75731b0186
+        with:
+          results_file: results_base.json
+          results_format: json
+          publish_results: false
+
+      - name: "Save base results"
+        run: |
+          if [ ! -f results_base.json ]; then
+            echo "results_base.json not found; Scorecard run may have failed."
+            exit 1
+          fi
+          mv results_base.json /tmp/results_base.json
+
+      - name: "Checkout head (PR branch)"
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          # Use the PR head commit
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: "Run Scorecard on head (PR)"
+        uses: ossf/scorecard-action@f49aabe0b5af0936a0987cfb85d86b75731b0186
+        with:
+          results_file: results_head.json
+          results_format: json
+          publish_results: false
+
+      - name: "Install jq for JSON parsing"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: "Compare Scorecard scores and fail if PR score decreased"
+        run: |
+          if [ ! -f results_head.json ]; then
+            echo "results_head.json not found; Scorecard run may have failed."
+            exit 1
+          fi
+
+          BASE=$(jq -r '.score // empty' /tmp/results_base.json)
+          HEAD=$(jq -r '.score // empty' results_head.json)
+
+          if [ -z "$BASE" ]; then
+            echo "Could not read base score from /tmp/results_base.json"
+            exit 1
+          fi
+          if [ -z "$HEAD" ]; then
+            echo "Could not read head score from results_head.json"
+            exit 1
+          fi
+
+          echo "Base score: $BASE"
+          echo "Head  score: $HEAD"
+
+          # Numeric comparison for floats using awk
+          decreased=$(awk -v a="$HEAD" -v b="$BASE" 'BEGIN{print (a < b) ? 1 : 0}')
+
+          if [ "$decreased" -eq 1 ]; then
+            echo "::error::Score decreased: base=$BASE head=$HEAD"
+            exit 1
+          fi
+
+          echo "Score did not decrease (base=$BASE head=$HEAD)."
